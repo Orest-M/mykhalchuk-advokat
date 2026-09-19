@@ -1,17 +1,22 @@
 ---
 // Base layout. Full SEO/head, fonts and design system are added in tasks 4 and 10.
 import '../styles/global.css';
+import { getLocaleFromUrl, useTranslations } from '../i18n/ui';
 
 interface Props {
   title?: string;
 }
 
-const { title = 'Адвокатське бюро NM&P' } = Astro.props;
-const lang = Astro.currentLocale ?? 'uk';
+// Locale drives <html lang>/<dir>; interface strings come from the i18n
+// dictionary (src/i18n/ui.ts), never hardcoded in markup.
+const locale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(locale);
+
+const { title = t('meta.defaultTitle') } = Astro.props;
 ---
 
 <!doctype html>
-<html lang={lang} dir="ltr">
+<html lang={locale} dir="ltr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
