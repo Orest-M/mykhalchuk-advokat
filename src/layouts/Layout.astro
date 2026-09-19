@@ -1,0 +1,23 @@
+---
+// Base layout. Full SEO/head, fonts and design system are added in tasks 4 and 10.
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Адвокатське бюро NM&P' } = Astro.props;
+const lang = Astro.currentLocale ?? 'uk';
+---
+
+<!doctype html>
+<html lang={lang} dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
