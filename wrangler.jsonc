@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nmp-landing",
+  "compatibility_date": "2026-09-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // The `assets` binding and D1/KV bindings are added in later tasks
+  // (task 3: assets/preview; task 9: D1). See docs/deploy.md.
+}
