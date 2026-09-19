@@ -1,0 +1,68 @@
+name: Deploy to Cloudflare Workers
+
+# Fallback CI path for deploys. The PRIMARY recommendation is Cloudflare
+# Workers Builds (dashboard Git integration) — see docs/deploy.md. Use EITHER
+# Workers Builds OR this workflow, never both, or every push deploys twice.
+#
+# This workflow deploys the production Worker on pushes to `main` and uploads a
+# preview version (its own preview URL) for every other branch / pull request.
+# It stays inert until the client adds the CLOUDFLARE_API_TOKEN and
+# CLOUDFLARE_ACCOUNT_ID repository secrets, so it never fails a repo that uses
+# Workers Builds instead.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# One in-flight run per ref; a newer push cancels the older run.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Skip PRs opened from forks: their runs cannot read repository secrets.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Secrets are not allowed in `if:` expressions, so surface their presence
+      # as a step output that later steps can gate on.
+      - name: Check Cloudflare credentials
+        id: creds
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set — skipping deploy. See docs/deploy.md to enable it."
+          fi
+
+      - name: Build
+        if: steps.creds.outputs.ready == 'true'
+        run: npm run build
+
+      - name: Deploy (production on main, preview version otherwise)
+        if: steps.creds.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # `astro build` already ran above, so only push the artifacts.
+          command: ${{ github.ref == 'refs/heads/main' && 'deploy' || 'versions upload' }}
